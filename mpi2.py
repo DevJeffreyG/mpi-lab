@@ -62,65 +62,85 @@ if rank == 0:
     # Broadcast de palabras objetivo
     palabras_objetivo = comm.bcast(palabras_objetivo, root=0)
 
-    siguiente = 0
-    workers_activos = size - 1
-
     freq_global = Counter()
 
     archivos_por_rank = {r: 0 for r in range(size)}
     tiempos_locales = {r: 0.0 for r in range(size)}
     t_local_inicio = time.perf_counter()
 
-    # Rank 0 distribucion de trabajo
-    while workers_activos > 0:
+    # CASO ESPECIAL: SOLO 1 PROCESO
+    if size == 1:
 
-        status = MPI.Status()
+        for fname in all_files:
 
-        comm.recv(
-            source=MPI.ANY_SOURCE,
-            tag=TAG_REQUEST,
-            status=status
-        )
+            ruta = os.path.join(DATASET_DIR, fname)
 
-        worker = status.Get_source()
-
-        if siguiente < total_archivos:
-
-            archivo = all_files[siguiente]
-            siguiente += 1
-
-            comm.send(
-                archivo,
-                dest=worker,
-                tag=TAG_WORK
+            freq_global.update(
+                procesar_archivo(ruta, palabras_objetivo)
             )
 
-            archivos_por_rank[worker] += 1
+            archivos_por_rank[0] += 1
 
-        else:
-
-            comm.send(
-                None,
-                dest=worker,
-                tag=TAG_FIN
-            )
-
-            workers_activos -= 1
-
-    tiempos_locales[0] = time.perf_counter() - t_local_inicio
-
-    # Recolectar resultados
-    for _ in range(1, size):
-
-        payload = comm.recv(
-            source=MPI.ANY_SOURCE,
-            tag=TAG_RESULT
+        tiempos_locales[0] = (
+            time.perf_counter() - t_local_inicio
         )
 
-        origen = payload["rank"]
+    # CASO NORMAL: MASTER-WORKER
+    else:
 
-        freq_global.update(payload["counter"])
-        tiempos_locales[origen] = payload["time"]
+        siguiente = 0
+        workers_activos = size - 1
+
+        # Rank 0 solo coordina
+        while workers_activos > 0:
+
+            status = MPI.Status()
+
+            comm.recv(
+                source=MPI.ANY_SOURCE,
+                tag=TAG_REQUEST,
+                status=status
+            )
+
+            worker = status.Get_source()
+
+            if siguiente < total_archivos:
+
+                archivo = all_files[siguiente]
+                siguiente += 1
+
+                comm.send(
+                    archivo,
+                    dest=worker,
+                    tag=TAG_WORK
+                )
+
+                archivos_por_rank[worker] += 1
+
+            else:
+
+                comm.send(
+                    None,
+                    dest=worker,
+                    tag=TAG_FIN
+                )
+
+                workers_activos -= 1
+
+        tiempos_locales[0] = (time.perf_counter() - t_local_inicio)
+
+        # Recolectar resultados
+        for _ in range(1, size):
+
+            payload = comm.recv(
+                source=MPI.ANY_SOURCE,
+                tag=TAG_RESULT
+            )
+
+            origen = payload["rank"]
+
+            freq_global.update(payload["counter"])
+            tiempos_locales[origen] = payload["time"]
 
     t_total = time.perf_counter() - t_total_inicio
 
@@ -130,7 +150,7 @@ if rank == 0:
     t_max = max(tiempos)
     t_prom = sum(tiempos) / size
 
-    imbalance = t_max / t_prom if t_prom > 0 else 1.0
+    imbalance = (t_max / t_prom if t_prom > 0 else 1.0)
 
     print("\n" + "=" * 40)
     print("MPI VERSION 2 - RESUMEN GLOBAL")
@@ -188,7 +208,10 @@ else:
         ruta = os.path.join(DATASET_DIR, tarea)
 
         local_counter.update(
-            procesar_archivo(ruta, palabras_objetivo)
+            procesar_archivo(
+                ruta,
+                palabras_objetivo
+            )
         )
 
     t_local = time.perf_counter() - t_inicio
