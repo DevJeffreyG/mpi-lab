@@ -76,7 +76,8 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/1worker/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio (1 Worker):** 4.26735s
+
+**Tiempo Promedio (1 Worker):** 4.26735s | **Balance Ratio:** 1 | **Eficiencia:** 1.4 | **Speedup:** 1.4
 
 #### MPI 1 - 2 Workers
 <table>
@@ -89,7 +90,8 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/2workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio (2 Workers):** 2.34152s
+
+**Tiempo Promedio (2 Workers):** 2.34152s | **Balance Ratio:** 1.0153 | **Eficiencia:** 1.275 | **Speedup:** 2.55
 
 #### MPI 1 - 4 Workers
 <table>
@@ -102,7 +104,8 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/4workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio (4 Workers):** 1.337225s
+
+**Tiempo Promedio (4 Workers):** 1.337225s | **Balance Ratio:** 1.1139 | **Eficiencia:** 1.119 | **Speedup:** 4.477
 
 #### MPI 1 - 8 Workers
 <table>
@@ -115,14 +118,15 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/8workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio (8 Workers):** 0.83215s
+
+**Tiempo Promedio (8 Workers):** 0.83215s | **Balance Ratio:** 1.1459 | **Eficiencia:** 0.899 | **Speedup:** 7.1943
 
 ### c. Evidencia de Desbalanceo de Carga
-*Añade aquí tu análisis y evidencia (basada en las capturas anteriores) sobre si hubo procesos que terminaron mucho antes que otros en la Versión 1. Usa los reportes de "Tiempo máximo" vs "Tiempo promedio por proceso".*
+
+En todas las ejecuciones con mas de 2 procesos se evidencia que algunos procesos tienen un tiempo de ejecucion mayor al promedio, esto se hace mas evidente a mayor cantidad de procesos y provoca un desbalanceo alto que desaprovecha los recursos disponibles
 
 ### d. Implementation of MPI Version 2 correcting the imbalance with its timing results
-
-La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Trabajador (Dinámico). El Rank 0 mantiene una cola con todos los archivos; cuando un trabajador (Rank > 0) se queda sin trabajo, envía una solicitud (TAG_REQUEST). El maestro escucha dinámicamente usando comm.iprobe y asigna un único archivo a la vez (TAG_WORK). El Rank 0 también procesa archivos locales cuando solo hay 1 proceso disponible. Cuando ya no quedan archivos, envía señales de terminación (TAG_FIN) y recolecta los contadores.
+La versión de mpi2.py implementa el patrón Maestro-Trabajador Dinámico dividiendo la ejecución en dos fases secuenciales para optimizar la red. En la primera fase, el Rank 0 actúa como un administrador dedicado que no procesa texto (a menos que size == 1); este se queda en un bucle bloqueante escuchando peticiones con comm.recv ante cualquier mensaje con tag=TAG_REQUEST, asignando archivos secuencialmente con un puntero (siguiente) mediante un mensaje TAG_WORK, o enviando una señal de apagado TAG_FIN cuando la cola se agota (workers_activos -= 1). Los Workers (rank > 0) solicitan archivos, los procesan de manera autónoma acumulando los resultados en su local_counter, y solo cuando rompen su ciclo de trabajo emiten un único mensaje consolidado al final con tag=TAG_RESULT. En la segunda fase, el Maestro ejecuta un ciclo de recolección (for _ in range(1, size)) diseñado para recibir estos diccionarios finales, unificar las frecuencias globales con freq_global.update() y calcular las métricas de desbalanceo, eliminando por completo la sobrecarga constante de la red y evitando condiciones de carrera.
 
 #### MPI 2 - 1 Worker (Proceso)
 <table>
@@ -135,7 +139,8 @@ La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Traba
     <td><img src="resultados/mpi2/1worker/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio:** 3.6678s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
+
+**Tiempo Promedio:** 3.6678s | **Speedup:** 1.63 | **Eficiencia:** 1.63
 
 #### MPI 2 - 2 Workers
 <table>
@@ -148,7 +153,8 @@ La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Traba
     <td><img src="resultados/mpi2/2workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio:** 3.7103s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
+
+**Tiempo Promedio:** 3.7103s | **Speedup:** 1.61 | **Eficiencia:** 0.805
 
 #### MPI 2 - 4 Workers
 <table>
@@ -161,7 +167,8 @@ La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Traba
     <td><img src="resultados/mpi2/4workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio:** 1.3828s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
+
+**Tiempo Promedio:** 1.3828s | **Speedup:** 4.32 | **Eficiencia:** 1.085
 
 #### MPI 2 - 8 Workers
 <table>
@@ -174,23 +181,24 @@ La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Traba
     <td><img src="resultados/mpi2/8workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio:** 0.7163s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
+
+**Tiempo Promedio:** 0.7163s | **Speedup:** 8.35 | **Eficiencia:** 1.043
 
 ---
 
 ## 6. Analysis
 
 **a. Did the first MPI implementation improve execution time compared to the sequential baseline?**
-* [Espacio para tu respuesta basada en la evidencia de los tiempos obtenidos]
+* La implementacion en paralelo mpi1 mejoro considerablemente el tiempo de ejecucion de la version secuencial
 
 **b. Was the observed speedup linear?**
-* [Espacio para tu respuesta: Compara si al duplicar núcleos el tiempo se redujo exactamente a la mitad, y justifica por el overhead de comunicación]
+* El speedUp no es lineal, a medida que aumenta la cantidad de procesos el speedUp no aumenta exactamente en la misma proporcion disminuyendo su aceleracion a medida que aumenta la cantidad de procesos. 
 
 **c. Is there evidence of load imbalance? How was it observed?**
-* [Espacio para tu respuesta: Refiérete a los tiempos locales (Tiempo máximo vs Tiempo promedio) arrojados en MPI 1]
+* Si hay imbalance, se puede observar comparando el tiempo maximo de ejecucion de un proceso contra el tiempo promedio de todos los procesos
 
 **d. Did the second implementation reduce load imbalance?**
-* [Espacio para tu respuesta: Compara la métrica de Load imbalance ratio de la versión 2 frente a las variaciones de la versión 1]
+* la segunda implementacion elimino casi completamente el imbalance, arrojando resultados muy cercanos a 1
 
 **e. Did the improved distribution strategy produce a real performance improvement?**
 * [Espacio para tu respuesta: Compara los Tp de MPI 2 vs MPI 1 para 4 y 8 procesos]
