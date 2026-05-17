@@ -62,7 +62,6 @@ if rank == 0:
     # Broadcast de palabras objetivo
     palabras_objetivo = comm.bcast(palabras_objetivo, root=0)
 
-    # Distribución dinámica
     siguiente = 0
     workers_activos = size - 1
 
@@ -70,66 +69,53 @@ if rank == 0:
 
     archivos_por_rank = {r: 0 for r in range(size)}
     tiempos_locales = {r: 0.0 for r in range(size)}
-
-    
     t_local_inicio = time.perf_counter()
 
-    while siguiente < total_archivos:
-
-        # Rank 0 procesa un archivo
-        fname = all_files[siguiente]
-        siguiente += 1
-
-        ruta = os.path.join(DATASET_DIR, fname)
-
-        local_counter = procesar_archivo(ruta, palabras_objetivo)
-
-        freq_global.update(local_counter)
-        archivos_por_rank[0] += 1
-
-        # Atender workers que pidan trabajo
-        while comm.iprobe(source=MPI.ANY_SOURCE, tag=TAG_REQUEST):
-
-            status = MPI.Status()
-            comm.recv(source=MPI.ANY_SOURCE,
-                      tag=TAG_REQUEST,
-                      status=status)
-
-            worker = status.Get_source()
-
-            if siguiente < total_archivos:
-                archivo = all_files[siguiente]
-                siguiente += 1
-
-                comm.send(archivo, dest=worker, tag=TAG_WORK)
-                archivos_por_rank[worker] += 1
-            else:
-                comm.send(None, dest=worker, tag=TAG_FIN)
-                workers_activos -= 1
-
-    tiempos_locales[0] = time.perf_counter() - t_local_inicio
-
-    # Finalizar workers restantes
-    
+    # Rank 0 distribucion de trabajo
     while workers_activos > 0:
 
         status = MPI.Status()
 
-        comm.recv(source=MPI.ANY_SOURCE,
-                  tag=TAG_REQUEST,
-                  status=status)
+        comm.recv(
+            source=MPI.ANY_SOURCE,
+            tag=TAG_REQUEST,
+            status=status
+        )
 
         worker = status.Get_source()
 
-        comm.send(None, dest=worker, tag=TAG_FIN)
+        if siguiente < total_archivos:
 
-        workers_activos -= 1
+            archivo = all_files[siguiente]
+            siguiente += 1
+
+            comm.send(
+                archivo,
+                dest=worker,
+                tag=TAG_WORK
+            )
+
+            archivos_por_rank[worker] += 1
+
+        else:
+
+            comm.send(
+                None,
+                dest=worker,
+                tag=TAG_FIN
+            )
+
+            workers_activos -= 1
+
+    tiempos_locales[0] = time.perf_counter() - t_local_inicio
 
     # Recolectar resultados
     for _ in range(1, size):
 
-        payload = comm.recv(source=MPI.ANY_SOURCE,
-                            tag=TAG_RESULT)
+        payload = comm.recv(
+            source=MPI.ANY_SOURCE,
+            tag=TAG_RESULT
+        )
 
         origen = payload["rank"]
 
@@ -163,7 +149,7 @@ if rank == 0:
     print(f"Tiempo total: {t_total:.6f}s")
     print(f"Tiempo máximo por proceso: {t_max:.6f}s")
     print(f"Tiempo promedio por proceso: {t_prom:.6f}s")
-    print(f"Load imbalance ratio: {imbalance:.6f}s")
+    print(f"Load imbalance ratio: {imbalance:.6f}")
 
     print("\nTop 10 palabras:")
     for palabra, cuenta in freq_global.most_common(10):
@@ -182,13 +168,19 @@ else:
     while True:
 
         # Solicitar trabajo
-        comm.send(None, dest=0, tag=TAG_REQUEST)
+        comm.send(
+            None,
+            dest=0,
+            tag=TAG_REQUEST
+        )
 
         status = MPI.Status()
 
-        tarea = comm.recv(source=0,
-                          tag=MPI.ANY_TAG,
-                          status=status)
+        tarea = comm.recv(
+            source=0,
+            tag=MPI.ANY_TAG,
+            status=status
+        )
 
         if status.Get_tag() == TAG_FIN:
             break
