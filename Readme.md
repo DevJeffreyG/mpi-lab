@@ -4,6 +4,7 @@
 * **Estudiante 1:** [Nombre y Apellidos] - [Código/Usuario]
 * **Estudiante 2:** [Nombre y Apellidos] - [Código/Usuario]
 * **Estudiante 3:** [Nombre y Apellidos] - [Código/Usuario]
+* **Estudiante 4:** [Nombre y Apellidos] - [Código/Usuario]
 
 ## 2. Descripción del Problema
 El objetivo de este laboratorio es diseñar, implementar y evaluar experimentalmente soluciones paralelas para un problema de procesamiento de texto. Específicamente, se busca contar cuántas veces aparece un conjunto de palabras clave (definidas en consulta.txt) dentro de un gran corpus de texto fragmentado en múltiples archivos (file_XXXX.txt). Se reportarán las 10 palabras más frecuentes. 
@@ -56,11 +57,11 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
 ## 5. Ejecución del Plan Experimental
 
 ### a. Tiempos del Baseline Secuencial
-* **Ejecución 1:** [Ingresar tiempo] s
-* **Ejecución 2:** [Ingresar tiempo] s
-* **Ejecución 3:** [Ingresar tiempo] s
-* **Ejecución 4:** [Ingresar tiempo] s
-* **Promedio Secuencial (Tseq):** [Ingresar promedio] s
+* **Ejecución 1:** 6.0204 s
+* **Ejecución 2:** 5.9594 s
+* **Ejecución 3:** 5.9587 s
+* **Ejecución 4:** 6.0089 s
+* **Promedio Secuencial (Tseq):** 5.9868 s
 
 ### b. Resultados de Tiempos MPI Versión 1
 
@@ -75,7 +76,7 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/1worker/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio (1 Worker):** [Ingresar tiempo promedio] s
+**Tiempo Promedio (1 Worker):** 4.26735s
 
 #### MPI 1 - 2 Workers
 <table>
@@ -88,7 +89,7 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/2workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio (2 Workers):** [Ingresar tiempo promedio] s
+**Tiempo Promedio (2 Workers):** 2.34152s
 
 #### MPI 1 - 4 Workers
 <table>
@@ -101,7 +102,7 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/4workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio (4 Workers):** [Ingresar tiempo promedio] s
+**Tiempo Promedio (4 Workers):** 1.337225s
 
 #### MPI 1 - 8 Workers
 <table>
@@ -114,14 +115,14 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/8workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio (8 Workers):** [Ingresar tiempo promedio] s
+**Tiempo Promedio (8 Workers):** 0.83215s
 
 ### c. Evidencia de Desbalanceo de Carga
 *Añade aquí tu análisis y evidencia (basada en las capturas anteriores) sobre si hubo procesos que terminaron mucho antes que otros en la Versión 1. Usa los reportes de "Tiempo máximo" vs "Tiempo promedio por proceso".*
 
 ### d. Implementation of MPI Version 2 correcting the imbalance with its timing results
 
-La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Trabajador (Dinámico). El Rank 0 mantiene una cola con todos los archivos; cuando un trabajador (Rank > 0) se queda sin trabajo, envía una solicitud (TAG_REQUEST). El maestro escucha dinámicamente usando comm.iprobe y asigna un único archivo a la vez (TAG_WORK). Al mismo tiempo, el Rank 0 también procesa archivos locales cuando no hay peticiones pendientes, lo que optimiza el uso de recursos. Cuando ya no quedan archivos, envía señales de terminación (TAG_FIN) y recolecta los contadores.
+La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Trabajador (Dinámico). El Rank 0 mantiene una cola con todos los archivos; cuando un trabajador (Rank > 0) se queda sin trabajo, envía una solicitud (TAG_REQUEST). El maestro escucha dinámicamente usando comm.iprobe y asigna un único archivo a la vez (TAG_WORK). El Rank 0 también procesa archivos locales cuando solo hay 1 proceso disponible. Cuando ya no quedan archivos, envía señales de terminación (TAG_FIN) y recolecta los contadores.
 
 #### MPI 2 - 1 Worker (Proceso)
 <table>
@@ -134,7 +135,7 @@ La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Traba
     <td><img src="resultados/mpi2/1worker/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio:** [Ingresar tiempo] s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
+**Tiempo Promedio:** 3.6678s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
 
 #### MPI 2 - 2 Workers
 <table>
@@ -147,7 +148,7 @@ La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Traba
     <td><img src="resultados/mpi2/2workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio:** [Ingresar tiempo] s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
+**Tiempo Promedio:** 3.7103s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
 
 #### MPI 2 - 4 Workers
 <table>
@@ -160,7 +161,7 @@ La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Traba
     <td><img src="resultados/mpi2/4workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio:** [Ingresar tiempo] s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
+**Tiempo Promedio:** 1.3828s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
 
 #### MPI 2 - 8 Workers
 <table>
@@ -173,7 +174,7 @@ La versión mpi2.py soluciona el desbalanceo utilizando un patrón Maestro-Traba
     <td><img src="resultados/mpi2/8workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-**Tiempo Promedio:** [Ingresar tiempo] s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
+**Tiempo Promedio:** 0.7163s | **Speedup:** [X] | **Eficiencia:** [X] | **Balance Ratio:** [X]
 
 ---
 
