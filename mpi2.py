@@ -71,7 +71,7 @@ if rank == 0:
     archivos_por_rank = {r: 0 for r in range(size)}
     tiempos_locales = {r: 0.0 for r in range(size)}
 
-    # Rank 0 también trabaja
+    
     t_local_inicio = time.perf_counter()
 
     while siguiente < total_archivos:
