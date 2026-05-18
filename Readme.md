@@ -10,7 +10,7 @@
 
 The objective for this laboratory is to design, implement and evaluate experimentally, parallel implementations for a text processing problem. More specifically, the goal is to count how many times does a set of keywords appear (defined on `consulta.txt`) within a large body of text. Finally, the implementation reports the 10 most frequent words.
 
-The problem would first be addresed with a sequential implementation, followed by two parallel implementations using MPI (Message Passing Interface): the first with a static file distribution and the second with a dynamic load balancing, to analyse how the number of processes and strategy of distribution of loads affect the general performance (Speedup, Efficiency, Balancing).
+The problem would first be addressed with a sequential implementation, followed by two parallel implementations using MPI (Message Passing Interface): the first with a static file distribution and the second with a dynamic load balancing, to analyse how the number of processes and strategy of distribution of loads affect the general performance (Speedup, Efficiency, Balancing).
 
 ## 3. Environment and Execution Instructions
 To ensure a reproducible and consistent environment, all implementations are performed inside a Docker container provided for the lab.
@@ -63,10 +63,10 @@ The `baseline_secuencial.py` script fetches the keywords to look for from `consu
 ### b. MPI version 1
 The `mpi1.py` script implements a static load-balancing model.
 1. The master process (Rank 0) reads the query words and determines the complete list of files in the corpus.
-2. This list is divided into equal parts (chunk) dependant on the communicator size (number of processes)
+2. This list is divided into equal parts (chunk) dependent on the communicator size (number of processes)
 3. Rank 0 uses `comm.bcast` to transmit the query words to every process and `comm.scatter` to assign each node its respective file **chunk**.
 4. Each process (including the master) iterates over its file chunk independently, processing matches and keeping a local count.
-5. Finally, `comm.gather`is used to collect each local counter, processing time and tokens at Rank 0, which consolidates the countersa and extracts the 10 most frequent words globally.
+5. Finally, `comm.gather`is used to collect each local counter, processing time and tokens at Rank 0, which consolidates the counters and extracts the 10 most frequent words globally.
 
 ### c. Test procedure
 To evaluate the performance of both MPI implementations the following procedure will be done:
