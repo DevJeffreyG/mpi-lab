@@ -8,12 +8,12 @@
 
 ## 2. Problem Description
 
-The objetive for this laboratory is to design, implement and evaluate experimentally, parallel implementations for a text processing problem. More specifically, the goal is to count how many times does a set of keywords appear (defined on `consulta.txt`) within a large body of text that is divided into multiple files (`file_XXXX.txt`). Finally, the implementation reports the 10 most frequent words.
+The objective for this laboratory is to design, implement and evaluate experimentally, parallel implementations for a text processing problem. More specifically, the goal is to count how many times does a set of keywords appear (defined on `consulta.txt`) within a large body of text. Finally, the implementation reports the 10 most frequent words.
 
-The problem would first be addresed with a sequential implementation, followed by two parallel implemntations using MPI (Message Passing Interface): the first with a static file distribution and the second with a dynamic load balancing, to analyse how the number of processes and strategy of distribution of loads affect the general performance (Speedup, Efficiency, Balancing).
+The problem would first be addresed with a sequential implementation, followed by two parallel implementations using MPI (Message Passing Interface): the first with a static file distribution and the second with a dynamic load balancing, to analyse how the number of processes and strategy of distribution of loads affect the general performance (Speedup, Efficiency, Balancing).
 
 ## 3. Environment and Execution Instructions
-To ensure a reproductible and consistent environment, all implementations are performed inside a Docker container provided for the lab.
+To ensure a reproducible and consistent environment, all implementations are performed inside a Docker container provided for the lab.
 
 ### Prerequisites
 * Docker installed and running.
@@ -152,7 +152,7 @@ In all runs involving more than two processes, we are able to identify that some
 ### d. Implementation of MPI Version 2 correcting the imbalance with its timing results
 The MPI version 2, `mpi2.py` implements the Dynamic Master-Worker Pattern, by dividing the execution into two sequential phases to optimize the work.
 
-On the first phase, Rank 0 acts as an dedicated administrator that does not process text, unless `size == 2`; instead, it waits on a blocked loop listening to request with `comm`. And `recv` to any message with `tag=TAG_REQUEST`, assigning files sequentially with a pointer (`siguiente`) with a `TAG_WORK` message, or sending a **Turn Off signal**: `TAG_FIN` when the queue ends, `workers_activos -= 1`. For the Workers (`rank > 0`), they request files, process them independently, accumulating the results in their `local_counter`, and only when they break their working loop, they emit an unique message with `tag=TAG_RESULT`.
+On the first phase, Rank 0 acts as an dedicated administrator that does not process text, unless `size == 1`; instead, it waits on a blocked loop listening to request with `comm`. And `recv` to any message with `tag=TAG_REQUEST`, assigning files sequentially with a pointer (`siguiente`) with a `TAG_WORK` message, or sending a **Turn Off signal**: `TAG_FIN` when the queue ends, `workers_activos -= 1`. For the Workers (`rank > 0`), they request files, process them independently, accumulating the results in their `local_counter`, and only when they break their working loop, they emit an unique message with `tag=TAG_RESULT`.
 
 On the second phase, the Master executes a recollecting loope (`for _ in range(1, size)`) designed to recieve these final dictionaries, join the global frequencies with `freq_global.update()` and calculate the umbalancing metrics, removing completely the constant overload in the process and avoiding racing conditions.
 
