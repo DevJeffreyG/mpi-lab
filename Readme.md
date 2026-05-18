@@ -201,10 +201,12 @@ La versión de mpi2.py implementa el patrón Maestro-Trabajador Dinámico dividi
 * la segunda implementacion elimino casi completamente el imbalance, arrojando resultados muy cercanos a 1
 
 **e. Did the improved distribution strategy produce a real performance improvement?**
-* [Espacio para tu respuesta: Compara los Tp de MPI 2 vs MPI 1 para 4 y 8 procesos]
+* Sí, pero su efectividad depende del numero de procesos. Con 4 procesos, MPI 1 es ligeramente más rápido porque utiliza al Maestro como un trabajador activo más (4 hilos de cómputo frente a solo 3 de MPI 2) y no sufre sobrecarga de mensajes en la red. Sin embargo, al escalar a 8 procesos, MPI 2 obtiene mejores resultados con el balanceo dinámico mantienendo a los 7 trabajadores al 100% de capacidad eliminando los tiempos muertos por desbalanceo de carga que frenan a MPI
 
 **f. What limitations affected your experiment?**
-* [Espacio para tu respuesta: Habla sobre lectura a disco (I/O bound), número real de núcleos de la máquina host frente a contenedores Docker sobre-suscritos, cuellos de botella de hardware, etc.]
+* docker run --rm augustosalazar/slim-mpi:2 nproc
+16
+la ejecucion de multiples procesos genera un cuello de botella físico que limita un escalado lineal ideal, aunque existen suficientes hilos de ejecucion los procesos pueden estar compitiendo por tiempo de ejecucion y la carga de archivos desde la memoria principal
 
 ## 7. Conclusions
 
