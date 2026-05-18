@@ -235,5 +235,10 @@ On the second phase, the Master executes a recollecting loope (`for _ in range(1
   Running multiple processes creates a physical bottleneck that limits ideal linear scalability; even if there are enough execution threads, the processes may be competing for execution time and for file loading from main memory.
 
 ## 7. Conclusions
+**Both parallel implementations successfully reduced execution time relative to the sequential baseline of `~5.99` seconds**, with MPI 1 reaching **~0.83 seconds** and MPI 2 reaching **~0.72 seconds** at 8 workers, speedups of `~7.19` and `~8.35` respectively: confirming that parallelizing this I/O-bound, text-search workload is an effective strategy that scales with process count.
 
-TODO
+However, MPI 1's static file distribution reveals a fundamental limitation: assigning fixed blocks before execution ignores variability in file size and word density, causing some processes to finish early and sit idle while waiting for the slowest one. This is reflected in a balance ratio that grows from `1` to `~1.15` as workers increase, and an efficiency that falls from `1.4` down to `~0.90` at 8 workers, meaning the system wastes nearly **10%** of its computational capacity, a penalty that would worsen on more heterogeneous datasets.
+
+MPI 2's **Dynamic Master-Worker** pattern directly addresses this by assigning files one at a time on demand, and its two-phase communication design, where workers send a single consolidated result at the end rather than reporting back on every file: further reduces network overhead and eliminates race conditions. At 8 workers the results speak clearly: efficiency of `~1.04` and a speedup that nearly matches the ideal line. The one notable exception is at 2 workers, where MPI 2's efficiency drops to `~0.81`, **below MPI 1's `~1.28` at the same point**, exposing that a dedicated master who processes no files carries a fixed coordination cost that only becomes worthwhile when enough workers are present to absorb it.
+
+From 4 workers onward, **MPI 2** recovers and consistently outperforms its static counterpart, **making it the stronger implementation overall**, provided the deployment environment can supply sufficient parallelism to justify the overhead.
