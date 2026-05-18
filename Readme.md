@@ -38,6 +38,10 @@ Before running the tests, the dataset must be generated using:
   ```
 * MPI version 1 (example with 4 workers*):
   ```
+  docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 mpirun --oversubscribe -n 4 --allow-run-as-root python /app/mpi1.py
+  ```
+  or
+  ```
   docker run --rm -v "%cd%:/app" augustosalazar/slim-mpi:2 mpirun --oversubscribe -n 4 --allow-run-as-root python /app/mpi1.py
   ```
 * MPI version 2 (example with 4 workers*):
