@@ -1,74 +1,91 @@
-# Conteo Paralelo de Palabras en un Corpus de Texto con MPI
+# Parallel Word Counting with MPI
 
-## 1. Información del Equipo
-* **Estudiante 1:** [Nombre y Apellidos] - [Código/Usuario]
-* **Estudiante 2:** [Nombre y Apellidos] - [Código/Usuario]
-* **Estudiante 3:** [Nombre y Apellidos] - [Código/Usuario]
-* **Estudiante 4:** [Nombre y Apellidos] - [Código/Usuario]
+## 1. Team Information
+* **José David Martínez Fernández**
+* **Gabriel Omar Páez Rolong**
+* **Jhosep Ricardo Varela Regalado**
+* **Alejandro Vargas Visbal**
 
-## 2. Descripción del Problema
-El objetivo de este laboratorio es diseñar, implementar y evaluar experimentalmente soluciones paralelas para un problema de procesamiento de texto. Específicamente, se busca contar cuántas veces aparece un conjunto de palabras clave (definidas en consulta.txt) dentro de un gran corpus de texto fragmentado en múltiples archivos (file_XXXX.txt). Se reportarán las 10 palabras más frecuentes. 
+## 2. Problem Description
 
-El problema se aborda primero con una solución secuencial de referencia, seguida de dos implementaciones paralelas usando MPI (Message Passing Interface): una con distribución estática de archivos y otra con balanceo de carga dinámico, para analizar cómo el número de procesos y la estrategia de distribución de carga afectan el rendimiento general (Speedup, Eficiencia y Balanceo).
+The objetive for this laboratory is to design, implement and evaluate experimentally, parallel implementations for a text processing problem. More specifically, the goal is to count how many times does a set of keywords appear (defined on `consulta.txt`) among a large number of fragmented text corpus in multiple files (`file_XXXX.txt`). Finally, the implementation reports the 10 most frequent words.
 
-## 3. Entorno e Instrucciones de Ejecución
-Para garantizar un entorno reproducible y consistente, todas las ejecuciones se realizan dentro de un contenedor Docker provisto para el laboratorio.
+The problem would first be addresed with a sequential implementation, followed by two parallel implemntations using MPI (Message Passing Interface): the first with a static file distribution and the second with a dynamic load balancing, to analyse how the number of processes and strategy of distribution of loads affect the general performance (Speedup, Efficiency, Balancing).
 
-Requisitos previos:
-* Docker instalado y en ejecución.
+## 3. Environment and Execution Instructions
+To ensure a reproductible and consistent environment, all implementations are performed inside a Docker container provided for the lab.
 
-Generación del Dataset:
-Antes de ejecutar las pruebas, se debe generar el conjunto de datos ejecutando:
-docker run --rm -v "$(pwd)":/app augustosalazar/slim-mpi:2 python /app/generator.py
+### Prerequisites
+* Docker installed and running.
+* Dataset generation:
+Before running the tests, the dataset must be generated using: 
+  ```
+  docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 python /app/generator.py
+  ```
+  or
+  ```
+  docker run --rm -v "%cd%:/app" augustosalazar/slim-mpi:2 python /app/generator.py 
+  ```
 
-Ejecución del Baseline Secuencial:
-docker run --rm -v "$(pwd)":/app augustosalazar/slim-mpi:2 python /app/baseline_secuencial.py
+### Execution
+* Sequential baseline execution:
+  ```
+  docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 python /app/baseline_secuencial.py
+  ```
+  or
+  ```
+  docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 python /app/baseline_secuencial.py
+  ```
+* MPI version 1 (example with 4 workers*):
+  ```
+  docker run --rm -v "%cd%:/app" augustosalazar/slim-mpi:2 mpirun --oversubscribe -n 4 --allow-run-as-root python /app/mpi1.py
+  ```
+* MPI version 2 (example with 4 workers*):
+  ```
+  docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 mpirun --oversubscribe -n 4 --allow-run-as-root python /app/mpi2.py
+  ```
+  or
+  ```
+  docker run --rm -v "%cd%:/app" augustosalazar/slim-mpi:2 mpirun --oversubscribe -n 4 --allow-run-as-root python /app/mpi2.py
+  ```
 
-Ejecución de MPI Versión 1 (Ejemplo con 4 workers):
-docker run --rm -v "$(pwd)":/app augustosalazar/slim-mpi:2 mpirun --oversubscribe -n 4 --allow-run-as-root python /app/mpi1.py
+> (*NOTE: To modify the number of processes, change the value after the `-n` flag on the mpirun's commands.)
 
-Ejecución de MPI Versión 2 (Ejemplo con 4 workers):
-docker run --rm -v "$(pwd)":/app augustosalazar/slim-mpi:2 mpirun --oversubscribe -n 4 --allow-run-as-root python /app/mpi2.py
+## 4. Experimental plan
 
-(Nota: Para cambiar el número de procesos, modifica el valor después de la bandera -n en los comandos de mpirun).
+### a. Sequential baseline
+The `baseline_secuencial.py` script fetches the keywords to look for from `consulta.txt` y and stores them insde a set on memory. Then, iterates linearly for every `file_*.txt` present in the corpus' directory. For each line in every file, the words are extracted, converts them to lowercase and verifies if they are in the objective word set. If they are, a global counter increases (Counter on Python). Once all the files have been read, the results are sorted, the 10 most frequent words are printed, and the total count is saved in a CSV file.
 
-## 4. Plan Experimental
+### b. MPI version 1
+The `mpi1.py` script implements a static load-balancing model.
+1. The master process (Rank 0) reads the query words and determines the complete list of files in the corpus.
+2. This list is divided into equal parts (chunk) dependant on the communicator size (number of processes)
+3. Rank 0 uses `comm.bcast` to transmit the query words to every process and `comm.scatter` to assign each node its respective file **chunk**.
+4. Each process (including the master) iterates over its file chunk independently, processing matches and keeping a local count.
+5. Finally, `comm.gather`is used to collect each local counter, processing time and tokens at Rank 0, which consolidates the countersa and extracts the 10 most frequent words globally.
 
-### a. Baseline Secuencial (Qué hace y cómo)
-El script baseline_secuencial.py lee las palabras a buscar desde consulta.txt y las almacena en un conjunto (set) en memoria. Luego, itera linealmente por cada archivo file_*.txt presente en el directorio del corpus. Por cada línea en cada archivo, extrae las palabras, las convierte a minúsculas y verifica si están en el conjunto de palabras objetivo. Si existe coincidencia, incrementa un contador global (Counter de Python). Al finalizar la lectura de todos los archivos, ordena los resultados, imprime el Top 10 y guarda el conteo total en un archivo CSV.
-
-### b. MPI Versión 1 (Qué hace y cómo)
-El script mpi1.py implementa un modelo de distribución de carga estático. 
-1. El proceso maestro (Rank 0) lee las palabras de consulta y determina la lista total de archivos del corpus.
-2. Esta lista se divide en partes iguales (chunks) dependiendo del tamaño del comunicador (número de procesos).
-3. Rank 0 usa comm.bcast para transmitir las palabras objetivo a todos los procesos y comm.scatter para asignar a cada nodo su respectivo bloque de archivos.
-4. Cada proceso (incluyendo el maestro) itera sobre su subconjunto de archivos de forma independiente, procesando las coincidencias y llevando un conteo local.
-5. Finalmente, se usa comm.gather para recolectar los contadores locales, los tiempos y los tokens en el Rank 0, quien consolida los contadores y extrae el Top 10 global.
-
-### c. El Procedimiento de Prueba
-Para evaluar el rendimiento de ambas implementaciones MPI se realizará el siguiente procedimiento:
-1. Se verificará la cantidad de núcleos físicos/lógicos disponibles en el contenedor.
-2. Se ejecutarán pruebas para configuraciones de p en {1, 2, 4, 8} procesos.
-3. Para mitigar variaciones del sistema operativo, se realizarán 4 ejecuciones por cada configuración.
-4. Se registrará el tiempo de ejecución total y el tiempo local de cada proceso para calcular el Speedup, la Eficiencia y observar la presencia de desbalanceo de carga.
+### c. Test procedure
+To evaluate the performance of both MPI implementations the following procedure will be done:
+1. The number of available physical/logical cores in the container will be verified.
+2. Tests will be run for p configurations of `{1, 2, 4, 8}` processes.
+3. To account for variations in the operating system, four runs will be performed for each configuration.
+4. The total execution time and local time for each process will be recorded to calculate the **Speedup**, **Efficiency** and to identify the load imbalance.
 
 ---
 
-## 5. Ejecución del Plan Experimental
-
-### a. Tiempos del Baseline Secuencial
+## 5. Experimental plan execution
+### a. Sequential baseline timings
 
 <img src="resultados/secuencial/run.png" width="400" alt="Run 1"/>
 
-* **Ejecución 1:** 6.0204 s
-* **Ejecución 2:** 5.9594 s
-* **Ejecución 3:** 5.9587 s
-* **Ejecución 4:** 6.0089 s
-* **Promedio Secuencial (Tseq):** 5.9868 s
+* **1st run:** `6.0204` seconds
+* **2nd run:** `5.9594` seconds
+* **3rd run:** `5.9587` seconds
+* **4th run:** `6.0089` seconds
+* **Sequential Average (Tseq):** `5.9868` seconds
 
-### b. Resultados de Tiempos MPI Versión 1
-
-#### MPI 1 - 1 Worker (Proceso)
+### b. MPI version 1 timing results
+#### MPI 1 - 1 Worker
 <table>
   <tr>
     <td><img src="resultados/mpi1/1worker/run1.png" width="400" alt="Run 1"/></td>
@@ -79,8 +96,6 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/1worker/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-
-**Tiempo Promedio (1 Worker):** 4.26735s | **Balance Ratio:** 1 | **Eficiencia:** 1.4 | **Speedup:** 1.4
 
 #### MPI 1 - 2 Workers
 <table>
@@ -94,8 +109,6 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
   </tr>
 </table>
 
-**Tiempo Promedio (2 Workers):** 2.34152s | **Balance Ratio:** 1.0153 | **Eficiencia:** 1.275 | **Speedup:** 2.55
-
 #### MPI 1 - 4 Workers
 <table>
   <tr>
@@ -107,8 +120,6 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
     <td><img src="resultados/mpi1/4workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-
-**Tiempo Promedio (4 Workers):** 1.337225s | **Balance Ratio:** 1.1139 | **Eficiencia:** 1.119 | **Speedup:** 4.477
 
 #### MPI 1 - 8 Workers
 <table>
@@ -122,14 +133,24 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
   </tr>
 </table>
 
-**Tiempo Promedio (8 Workers):** 0.83215s | **Balance Ratio:** 1.1459 | **Eficiencia:** 0.899 | **Speedup:** 7.1943
+##### MPI 1 Results Summary
+| Workers | Average time (seconds) | Balance ratio | Efficiency | Speedup |
+| --- | --- | --- | --- | --- |
+| 1 | 4.26735 | 1 | 1.4 | 1.4 |
+| 2 | 2.34152 | 1.0143 | 1.275 | 2.55 |
+| 4 | 1.337225 | 1.1139 | 1.119 | 4.477 |
+| 8 | 0.83215 | 1.1459 | 0.899 | 7.1943 |
 
-### c. Evidencia de Desbalanceo de Carga
 
-En todas las ejecuciones con mas de 2 procesos se evidencia que algunos procesos tienen un tiempo de ejecucion mayor al promedio, esto se hace mas evidente a mayor cantidad de procesos y provoca un desbalanceo alto que desaprovecha los recursos disponibles
+### c. Load imbalance evidence
+In all runs involving more than two processes, we are able to identify that some processes have a longer-than-average execution time; this becomes more apparent as the number of processes increases and leads to significant imbalance, resulting in wasted available resources.
 
 ### d. Implementation of MPI Version 2 correcting the imbalance with its timing results
-La versión de mpi2.py implementa el patrón Maestro-Trabajador Dinámico dividiendo la ejecución en dos fases secuenciales para optimizar la red. En la primera fase, el Rank 0 actúa como un administrador dedicado que no procesa texto (a menos que size == 1); este se queda en un bucle bloqueante escuchando peticiones con comm.recv ante cualquier mensaje con tag=TAG_REQUEST, asignando archivos secuencialmente con un puntero (siguiente) mediante un mensaje TAG_WORK, o enviando una señal de apagado TAG_FIN cuando la cola se agota (workers_activos -= 1). Los Workers (rank > 0) solicitan archivos, los procesan de manera autónoma acumulando los resultados en su local_counter, y solo cuando rompen su ciclo de trabajo emiten un único mensaje consolidado al final con tag=TAG_RESULT. En la segunda fase, el Maestro ejecuta un ciclo de recolección (for _ in range(1, size)) diseñado para recibir estos diccionarios finales, unificar las frecuencias globales con freq_global.update() y calcular las métricas de desbalanceo, eliminando por completo la sobrecarga constante de la red y evitando condiciones de carrera.
+The MPI version 2, `mpi2.py` implements the Dynamic Master-Worker Pattern, by dividing the execution into two sequential phases to optimize the work.
+
+On the first phase, Rank 0 acts as an dedicated administrator that does not process text, unless `size == 2`; instead, it waits on a blocked loop listening to request with `comm`. And `recv` to any message with `tag=TAG_REQUEST`, assigning files sequentially with a pointer (`siguiente`) with a `TAG_WORK` message, or sending a **Turn Off signal**: `TAG_FIN` when the queue ends, `workers_activos -= 1`. For the Workers (`rank > 0`), they request files, process them independently, accumulating the results in their `local_counter`, and only when they break their working loop, they emit an unique message with `tag=TAG_RESULT`.
+
+On the second phase, the Master executes a recollecting loope (`for _ in range(1, size)`) designed to recieve these final dictionaries, join the global frequencies with `freq_global.update()` and calculate the umbalancing metrics, removing completely the constant overload in the process and avoiding racing conditions.
 
 #### MPI 2 - 1 Worker (Proceso)
 <table>
@@ -143,8 +164,6 @@ La versión de mpi2.py implementa el patrón Maestro-Trabajador Dinámico dividi
   </tr>
 </table>
 
-**Tiempo Promedio:** 3.6678s | **Speedup:** 1.63 | **Eficiencia:** 1.63
-
 #### MPI 2 - 2 Workers
 <table>
   <tr>
@@ -156,8 +175,6 @@ La versión de mpi2.py implementa el patrón Maestro-Trabajador Dinámico dividi
     <td><img src="resultados/mpi2/2workers/run4.png" width="400" alt="Run 4"/></td>
   </tr>
 </table>
-
-**Tiempo Promedio:** 3.7103s | **Speedup:** 1.61 | **Eficiencia:** 0.805
 
 #### MPI 2 - 4 Workers
 <table>
@@ -171,8 +188,6 @@ La versión de mpi2.py implementa el patrón Maestro-Trabajador Dinámico dividi
   </tr>
 </table>
 
-**Tiempo Promedio:** 1.3828s | **Speedup:** 4.32 | **Eficiencia:** 1.085
-
 #### MPI 2 - 8 Workers
 <table>
   <tr>
@@ -185,32 +200,40 @@ La versión de mpi2.py implementa el patrón Maestro-Trabajador Dinámico dividi
   </tr>
 </table>
 
-**Tiempo Promedio:** 0.7163s | **Speedup:** 8.35 | **Eficiencia:** 1.043
-
----
+##### MPI 2 Results Summary
+| Workers | Average time (seconds) | Speedup | Efficiency |
+| --- | --- | --- | --- |
+| 1 | 3.6678 | 1.63 | 1.63 |
+| 2 | 3.7103 | 1.61 | 0.805 |
+| 4 | 1.3828 | 4.32 | 1.085 |
+| 8 | 0.7163 | 8.35 | 1.043 |
 
 ## 6. Analysis
 
 **a. Did the first MPI implementation improve execution time compared to the sequential baseline?**
-* La implementacion en paralelo mpi1 mejoro considerablemente el tiempo de ejecucion de la version secuencial
+* The `mpi1.py` parallel implementation **significantly improved** the execution time of the sequential version
 
 **b. Was the observed speedup linear?**
-* El speedUp no es lineal, a medida que aumenta la cantidad de procesos el speedUp no aumenta exactamente en la misma proporcion disminuyendo su aceleracion a medida que aumenta la cantidad de procesos. 
+* **The speedup is not linear**; as the number of processes increases, the speedup does not increase at exactly the same rate, and its rate of increase slows as the number of processes increases. 
 
 **c. Is there evidence of load imbalance? How was it observed?**
-* Si hay imbalance, se puede observar comparando el tiempo maximo de ejecucion de un proceso contra el tiempo promedio de todos los procesos
+* **Yes, there is an imbalance**, which can be observed by comparing the maximum execution time of a process with the average execution time of all processes.
 
 **d. Did the second implementation reduce load imbalance?**
-* la segunda implementacion elimino casi completamente el imbalance, arrojando resultados muy cercanos a 1
+* **The second implementation almost completely eliminated the imbalance**, yielding results very close to 1.
 
 **e. Did the improved distribution strategy produce a real performance improvement?**
-* Sí, pero su efectividad depende del numero de procesos. Con 4 procesos, MPI 1 es ligeramente más rápido porque utiliza al Maestro como un trabajador activo más (4 hilos de cómputo frente a solo 3 de MPI 2) y no sufre sobrecarga de mensajes en la red. Sin embargo, al escalar a 8 procesos, MPI 2 obtiene mejores resultados con el balanceo dinámico mantienendo a los 7 trabajadores al 100% de capacidad eliminando los tiempos muertos por desbalanceo de carga que frenan a MPI
+* **Yes, but its effectiveness depends on the number of processes**. With 4 processes, MPI 1 is slightly faster because it uses the master as an additional active worker (*4 compute threads versus only 3 in MPI 2*) and does not suffer from message overhead on the network. **However**, when scaling to 8 processes, MPI 2 performs better with dynamic load balancing, keeping all 7 workers at 100% capacity and eliminating the downtime caused by load imbalance that slows down MPI.
 
 **f. What limitations affected your experiment?**
-* docker run --rm augustosalazar/slim-mpi:2 nproc
-16
-la ejecucion de multiples procesos genera un cuello de botella físico que limita un escalado lineal ideal, aunque existen suficientes hilos de ejecucion los procesos pueden estar compitiendo por tiempo de ejecucion y la carga de archivos desde la memoria principal
+
+* ```
+  docker run --rm augustosalazar/slim-mpi:2 nproc
+  ```
+  > 16
+
+  Running multiple processes creates a physical bottleneck that limits ideal linear scalability; even if there are enough execution threads, the processes may be competing for execution time and for file loading from main memory.
 
 ## 7. Conclusions
 
-[Espacio para la conclusión general. Aquí debes declarar formalmente si las implementaciones mejoraron los tiempos frente al secuencial, detallar que el problema principal en V1 fue que archivos más pesados demoraban a ciertos nodos mientras otros estaban ociosos (estático), y cómo la V2 mitigó esto pidiendo trabajo bajo demanda (dinámico), finalizando con un juicio ingenieril fundamentado en los datos y el hardware disponible.]
+TODO
