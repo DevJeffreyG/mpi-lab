@@ -57,6 +57,9 @@ Para evaluar el rendimiento de ambas implementaciones MPI se realizará el sigui
 ## 5. Ejecución del Plan Experimental
 
 ### a. Tiempos del Baseline Secuencial
+
+<img src="resultados/secuencial/run.png" width="400" alt="Run 1"/>
+
 * **Ejecución 1:** 6.0204 s
 * **Ejecución 2:** 5.9594 s
 * **Ejecución 3:** 5.9587 s
