@@ -150,11 +150,11 @@ To evaluate the performance of both MPI implementations the following procedure 
 In all runs involving more than two processes, we are able to identify that some processes have a longer-than-average execution time; this becomes more apparent as the number of processes increases and leads to significant imbalance, resulting in wasted available resources.
 
 ### d. Implementation of MPI Version 2 correcting the imbalance with its timing results
-The MPI version 2, `mpi2.py` implements the Dynamic Master-Worker Pattern, by dividing the execution into two sequential phases to optimize the work.
+The MPI version 2, `mpi2.py` implements the Dynamic Master-Worker Pattern, by dividing the execution into a dynamic distribution stage and a final result collection stage.
 
-On the first phase, Rank 0 acts as an dedicated administrator that does not process text, unless `size == 1`; instead, it waits on a blocked loop listening to request with `comm`. And `recv` to any message with `tag=TAG_REQUEST`, assigning files sequentially with a pointer (`siguiente`) with a `TAG_WORK` message, or sending a **Turn Off signal**: `TAG_FIN` when the queue ends, `workers_activos -= 1`. For the Workers (`rank > 0`), they request files, process them independently, accumulating the results in their `local_counter`, and only when they break their working loop, they emit an unique message with `tag=TAG_RESULT`.
+On the first phase, Rank 0 acts as an dedicated administrator that does not process text, unless `size == 1`; instead, it waits on a blocked loop listening to request with `comm`. And `recv` to any message with `tag=TAG_REQUEST`, assigning files sequentially with a pointer (`siguiente`) with a `TAG_WORK` message, or sending a **Termination signal**: `TAG_FIN` when the queue ends, `workers_activos -= 1`. For the Workers (`rank > 0`), they request files, process them independently, accumulating the results in their `local_counter`, and only when they break their working loop, they emit an unique message with `tag=TAG_RESULT`.
 
-On the second phase, the Master executes a recollecting loope (`for _ in range(1, size)`) designed to recieve these final dictionaries, join the global frequencies with `freq_global.update()` and calculate the umbalancing metrics, removing completely the constant overload in the process and avoiding racing conditions.
+On the second phase, the Master executes a collection loop (`for _ in range(1, size)`) designed to recieve these final dictionaries, join the global frequencies with `freq_global.update()` and calculate the umbalancing metrics, removing completely the constant overload in the process and avoiding racing conditions.
 
 #### MPI 2 - 1 Worker (Proceso)
 <table>
