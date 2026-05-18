@@ -34,7 +34,7 @@ Before running the tests, the dataset must be generated using:
   ```
   or
   ```
-  docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 python /app/baseline_secuencial.py
+  docker run --rm -v "%cd%:/app" augustosalazar/slim-mpi:2 python /app/baseline_secuencial.py
   ```
 * MPI version 1 (example with 4 workers*):
   ```
