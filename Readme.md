@@ -8,9 +8,9 @@
 
 ## 2. Problem Description
 
-The objective for this laboratory is to design, implement and evaluate experimentally, parallel implementations for a text processing problem. More specifically, the goal is to count how many times does a set of keywords appear (defined on `consulta.txt`) within a large body of text. Finally, the implementation reports the 10 most frequent words.
+The objective for this laboratory is to design, implement and evaluate experimentally, parallel implementations for a text processing problem. More specifically, the goal is to count how many times a set of keywords appear (defined on `consulta.txt`) within a large body of text. Finally, the implementation reports the 10 most frequent words.
 
-The problem would first be addressed with a sequential implementation, followed by two parallel implementations using MPI (Message Passing Interface): the first with a static file distribution and the second with a dynamic load balancing, to analyse how the number of processes and strategy of distribution of loads affect the general performance (Speedup, Efficiency, Balancing).
+The problem would first be addressed with a sequential implementation, followed by two parallel implementations using MPI (Message Passing Interface): the first with a static file distribution and the second with dynamic load balancing, to analyse how the number of processes and strategy of distribution of loads affect the general performance (Speedup, Efficiency, Balancing).
 
 ## 3. Environment and Execution Instructions
 To ensure a reproducible and consistent environment, all implementations are performed inside a Docker container provided for the lab.
@@ -58,7 +58,7 @@ Before running the tests, the dataset must be generated using:
 ## 4. Experimental plan
 
 ### a. Sequential baseline
-The `baseline_secuencial.py` script fetches the keywords to look for from `consulta.txt` y and stores them insde a set on memory. Then, iterates linearly for every `file_*.txt` present in the corpus' directory. For each line in every file, the words are extracted, converts them to lowercase and verifies if they are in the objective word set. If they are, a global counter increases (Counter on Python). Once all the files have been read, the results are sorted, the 10 most frequent words are printed, and the total count is saved in a CSV file.
+The `baseline_secuencial.py` script fetches the keywords to look for from `consulta.txt` and stores them inside a set on memory. Then, it iterates linearly for every `file_*.txt` present in the corpus' directory. For each line in every file, the words are extracted, converted to lowercase, and checked to see if they are in the target word set. If they are, a global counter increases (Counter on Python). Once all the files have been read, the results are sorted, the 10 most frequent words are printed, and the total count is saved in a CSV file.
 
 ### b. MPI version 1
 The `mpi1.py` script implements a static load-balancing model.
@@ -152,7 +152,7 @@ In all runs involving more than two processes, we are able to identify that some
 ### d. Implementation of MPI Version 2 correcting the imbalance with its timing results
 The MPI version 2, `mpi2.py` implements the Dynamic Master-Worker Pattern, by dividing the execution into a dynamic distribution stage and a final result collection stage.
 
-On the first phase, Rank 0 acts as a dedicated administrator that does not process text, unless `size == 1`; instead, it waits on a blocked loop listening to request with `comm`. And `recv` to any message with `tag=TAG_REQUEST`, assigning files sequentially with a pointer (`siguiente`) with a `TAG_WORK` message, or sending a **Termination signal**: `TAG_FIN` when the queue ends, `workers_activos -= 1`. For the Workers (`rank > 0`), they request files, process them independently, accumulating the results in their `local_counter`, and only when they break their working loop, they emit a unique message with `tag=TAG_RESULT`.
+In the first phase, Rank 0 acts as a dedicated administrator that does not process text, unless `size == 1`; instead, it waits on a blocked loop listening to request with `comm`. And `recv` to any message with `tag=TAG_REQUEST`, assigning files sequentially with a pointer (`siguiente`) using a `TAG_WORK` message, or sending a **Termination signal**: `TAG_FIN` when the queue ends, `workers_activos -= 1`. For the Workers (`rank > 0`), they request files, process them independently, accumulating the results in their `local_counter`, and only when exit break their working loop, they emit a unique message with `tag=TAG_RESULT`.
 
 On the second phase, the Master executes a collection loop (`for _ in range(1, size)`) designed to receive these final dictionaries, join the global frequencies with `freq_global.update()` and calculate the imbalance metrics, removing completely the constant overload in the process and avoiding racing conditions.
 
@@ -224,10 +224,10 @@ On the second phase, the Master executes a collection loop (`for _ in range(1, s
 * **Yes, there is an imbalance**, which can be observed by comparing the maximum execution time of a process with the average execution time of all processes.
 
 **d. Did the second implementation reduce load imbalance?**
-* **The second implementation almost completely eliminated the imbalance**, yielding results very close to 1.
+* **The second implementation almost completely eliminated the imbalance**, yielding balance ratios very close to 1.
 
 **e. Did the improved distribution strategy produce a real performance improvement?**
-* **Yes, but its effectiveness depends on the number of processes**. With 4 processes, MPI 1 is slightly faster because it uses the master as an additional active worker (*4 compute threads versus only 3 in MPI 2*) and does not suffer from message overhead on the network. **However**, when scaling to 8 processes, MPI 2 performs better with dynamic load balancing, keeping all 7 workers at 100% capacity and eliminating the downtime caused by load imbalance that slows down MPI.
+* **Yes, but its effectiveness depends on the number of processes**. With 4 processes, MPI 1 is slightly faster because it uses the master as an additional active worker (*4 compute threads versus only 3 in MPI 2*) and does not suffer from additional communication overhead. **However**, when scaling to 8 processes, MPI 2 performs better with dynamic load balancing, keeping all 7 workers at 100% capacity and eliminating the downtime caused by load imbalance that slows down the execution.
 
 **f. What limitations affected your experiment?**
 
@@ -243,6 +243,6 @@ On the second phase, the Master executes a collection loop (`for _ in range(1, s
 
 However, MPI 1's static file distribution reveals a fundamental limitation: assigning fixed blocks before execution ignores variability in file size and word density, causing some processes to finish early and sit idle while waiting for the slowest one. This is reflected in a balance ratio that grows from `1` to `~1.15` as workers increase, and an efficiency that falls from `1.4` down to `~0.90` at 8 workers, meaning the system wastes nearly **10%** of its computational capacity, a penalty that would worsen on more heterogeneous datasets.
 
-MPI 2's **Dynamic Master-Worker** pattern directly addresses this by assigning files one at a time on demand, and its two-phase communication design, where workers send a single consolidated result at the end rather than reporting back on every file: further reduces network overhead and eliminates race conditions. At 8 workers the results speak clearly: efficiency of `~1.04` and a speedup that nearly matches the ideal line. The one notable exception is at 2 workers, where MPI 2's efficiency drops to `~0.81`, **below MPI 1's `~1.28` at the same point**, exposing that a dedicated master who processes no files carries a fixed coordination cost that only becomes worthwhile when enough workers are present to absorb it.
+MPI 2's **Dynamic Master-Worker** pattern directly addresses this by assigning files one at a time on demand, and its two-phase communication design, where workers send a single consolidated result at the end rather than reporting back on every file, further reduces network overhead and eliminates race conditions. At 8 workers the results speak clearly: efficiency of `~1.04` and a speedup that nearly matches the ideal line. The one notable exception is at 2 workers, where MPI 2's efficiency drops to `~0.81`, **below MPI 1's `~1.28` at the same point**, exposing that a dedicated master who processes no files carries a fixed coordination cost that only becomes worthwhile when enough workers are present to absorb it.
 
 From 4 workers onward, **MPI 2** recovers and consistently outperforms its static counterpart, **making it the stronger implementation overall**, provided the deployment environment can supply sufficient parallelism to justify the overhead.
