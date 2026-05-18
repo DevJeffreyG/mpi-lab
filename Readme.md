@@ -8,7 +8,7 @@
 
 ## 2. Problem Description
 
-The objetive for this laboratory is to design, implement and evaluate experimentally, parallel implementations for a text processing problem. More specifically, the goal is to count how many times does a set of keywords appear (defined on `consulta.txt`) among a large number of fragmented text corpus in multiple files (`file_XXXX.txt`). Finally, the implementation reports the 10 most frequent words.
+The objetive for this laboratory is to design, implement and evaluate experimentally, parallel implementations for a text processing problem. More specifically, the goal is to count how many times does a set of keywords appear (defined on `consulta.txt`) within a large body of text that is divided into multiple files (`file_XXXX.txt`). Finally, the implementation reports the 10 most frequent words.
 
 The problem would first be addresed with a sequential implementation, followed by two parallel implemntations using MPI (Message Passing Interface): the first with a static file distribution and the second with a dynamic load balancing, to analyse how the number of processes and strategy of distribution of loads affect the general performance (Speedup, Efficiency, Balancing).
 
